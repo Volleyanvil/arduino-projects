@@ -13,8 +13,8 @@
     - GreenB
 
   Author: Ilari Mattsson
-  Library: Mqtt Utility
-  File: Mqtt_Utility.cpp
+  Project MKR1010_Indoor_Plant_Monitor
+  File: main.cpp
   Version: 1
 */
 

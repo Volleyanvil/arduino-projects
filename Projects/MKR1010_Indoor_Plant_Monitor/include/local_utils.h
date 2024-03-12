@@ -1,3 +1,8 @@
+/*
+  Author: Ilari Mattsson
+  project: MKR1010_Indoor_Plant_Monitor
+  File: local_utils.h
+*/
 
 typedef struct moisture_sensor {
   uint8_t pin;
