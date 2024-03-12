@@ -15,32 +15,6 @@ typedef struct mqtt_device_configuration {
   const char* value_template;
 } mdev;
 
-enum mdevfs_buffers{
-  B_CONF_T = 128,
-  B_DEV_CLA = 32,
-  B_NAME = 64,
-  B_STATE_T = 128,
-  B_UNIQ_ID = 16,
-  B_UNIT_OF_MEAS = 8,
-  B_VAL_TPL = 128
-};
-
-typedef struct mqtt_device_fixed_size_configuration {
-  char configuration_topic[B_CONF_T];
-  char device_class[B_DEV_CLA];
-  unsigned short expires_after;
-  char name[B_NAME];
-  char state_topic[B_STATE_T];
-  char unique_id[B_UNIQ_ID];
-  char unit_of_measurement[B_UNIT_OF_MEAS];
-  char value_template[B_VAL_TPL];
-} mdevfs;
-
-typedef struct {
-  const char* key;
-  const char* value;
-} pair;
-
 typedef enum {
     CONN_NO_ERR = 123,
     CONN_NO_PARAMS = 50,

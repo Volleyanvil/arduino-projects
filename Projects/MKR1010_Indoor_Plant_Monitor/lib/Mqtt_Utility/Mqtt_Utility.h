@@ -47,7 +47,6 @@ public:
   uint16_t checkConnection();
 
   void configureTopic(mdev* device_config);
-  void configureTopic(mdevfs* device_config);
   void configureTopic(JsonDocument doc, const char* topic);
 
   void setMqttHost(char* host, uint16_t port);

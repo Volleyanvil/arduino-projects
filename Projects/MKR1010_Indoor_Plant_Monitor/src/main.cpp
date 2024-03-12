@@ -3,6 +3,14 @@
   Data is transmission with MQTT over WiFi. Supports TLS. Does not support client certificates.
   Implements MQTT Discovery protocol for automatic device discovery and configuration for Home Assistant.
 
+  Changes:
+  [1.1] --------------
+  > Improvemets to dynamic moisture sensor configuration in setup()
+    - Sensor specific strings are now placed in char arrays before assigning to mdev to avoid an issue with serializeJson() and char* assignment
+    - Constant portions of concatenated strings are now assigned to const char arrays within scope for better parameter readability
+    - Removed helper functions from string concatenation. Now calls snprintf directly instead
+    - Removed static sized mdev definition and related methods from local Mqtt Utility implementation
+
   Board(s):
     - Arduino MKR WiFi 1010
     - Arduino Nano 33 IoT (platformio.ini env not configured)
@@ -15,7 +23,7 @@
   Author: Ilari Mattsson
   Project MKR1010_Indoor_Plant_Monitor
   File: main.cpp
-  Version: 1
+  Version: 1.1
 */
 
 #include <Arduino.h>
@@ -76,9 +84,6 @@ MqttUtility mqttUtil(wifiClient, mqttClient, ssid, psk, host, port);
 //
 void measureData();
 void sendData();
-char * makeConfTopic(char *, char *);
-char * makeNameOrId(char *, char *);
-char * makeValueTemplate(char *);
 int setMoistureCap(uint8_t, bool);
 int setMoistureBase(uint8_t, bool);
 void rgbLed(uint8_t, uint8_t, uint8_t);
@@ -134,32 +139,17 @@ void setup() {
   delay(50);
 
   for (int i = 0; i < mst_arr_size; i++){
-    char* name = makeNameOrId((*mst_arr)[i].id, (char*)"GreenB Soil Moisture ");
-    char* id = makeNameOrId((*mst_arr)[i].id, (char*)"greenBsoil");
-    char* val_tpl = makeValueTemplate((*mst_arr)[i].val_id);
-    char* conf_topic = makeConfTopic((*mst_arr)[i].id, (char*)"greenBM");
-    mdev dev = { conf_topic, "moisture", sensor_timeout, name, state_topic, id, "%", val_tpl };
-    mqttUtil.configureTopic(&dev);
-    free(name);
-    free(id);
-    free(val_tpl);
-    free(conf_topic);
-  }
-  /*
-  // Alternative implementation using mdevfs structs with fixed-size char arrays
-  for (int i = 0; i < mst_arr_size; i++){
-    mdevfs dev;
-    snprintf(dev.configuration_topic, B_CONF_T, "%s%s%s", "homeassistant/sensor/greenBM", (*mst_arr)[i].id, "/config");
-    snprintf(dev.device_class, B_DEV_CLA, "%s", "moisture");
-    dev.expires_after = sensor_timeout;
-    snprintf(dev.name, B_NAME, "%s%s", "GreenB Soil Moisture ", (*mst_arr)[i].id);
-    snprintf(dev.state_topic, B_STATE_T, "%s", state_topic);
-    snprintf(dev.unique_id, B_UNIQ_ID, "%s%s", "greenBsoil", (*mst_arr)[i].id);
-    snprintf(dev.unit_of_measurement, B_UNIT_OF_MEAS, "%s", "%");
-    snprintf(dev.value_template, B_VAL_TPL, "%s%s%s", "{{ value_json.", (*mst_arr)[i].val_id, " }}");
+    const char name_h[]="Green B Soil Moisture", id_h[]="greenBsoil", val_h[]="{{ value_json.", val_t[]=" }}", conf_h[]="homeassistant/sensor/greenBM", conf_t[]="/config";
+    // Can be optimised by tightening array sizes if necessary
+    char vals[4][128];
+    snprintf(vals[0], 128, "%s%s%s", conf_h, (*mst_arr)[i].id, conf_t);
+    snprintf(vals[1], 128, "%s%s", name_h, (*mst_arr)[i].id);
+    snprintf(vals[2], 128, "%s%s", id_h, (*mst_arr)[i].id);
+    snprintf(vals[3], 128, "%s%s%s", val_h, (*mst_arr)[i].val_id, val_t);
+    mdev dev = { vals[0], "moisture", sensor_timeout, vals[1], state_topic, vals[2], "%", vals[3] };
     mqttUtil.configureTopic(&dev);
   }
-  */
+
   #ifdef DHTPIN
   dht.begin();
   const char dht_temp_conf_t[] = "homeassistant/sensor/greenBT/config";
@@ -169,8 +159,8 @@ void setup() {
   mdev dhthdev = { dht_hum_conf_t, "humidity", sensor_timeout, "GreenB Air Humidity", state_topic, "greenBhum", "%", "{{ value_json.hum | round(1) }}" };
   mqttUtil.configureTopic(&dhthdev);
   #endif
+  
   delay(50);
-
   digitalWrite(CASE_LED, LOW);
 }
 
@@ -233,31 +223,6 @@ void sendData() {
     mqttUtil.checkConnection();
     mqttUtil.sendPackets(doc, state_topic);
     return;
-}
-
-char * makeConfTopic(char* id, char* body){
-  char head[] = "homeassistant/sensor/";
-  char tail[] = "/config";
-  size_t bufs = strlen(head) + strlen(body) + strlen(id) + strlen(tail) + 1;
-  char* arr = (char*)malloc(bufs * sizeof(char));
-  snprintf(arr, bufs, "%s%s%s%s", head, body, id, tail);
-  return arr;
-}
-
-char * makeNameOrId(char* id, char* body){
-  size_t bufs = strlen(body) + strlen(id) + 1;
-  char* arr = (char*)malloc(bufs * sizeof(char));
-  snprintf(arr, bufs, "%s%s", body, id);
-  return arr;
-}
-
-char * makeValueTemplate(char* val_id){
-  char head[] = "{{ value_json.";
-  char tail[] = " }}";
-  size_t bufs = strlen(head) + strlen(val_id) + strlen(tail) + 1;
-  char* arr = (char*)malloc(bufs * sizeof(char));
-  snprintf(arr, bufs, "%s%s%s", head, val_id, tail);
-  return arr;
 }
 
 int setMoistureCap(uint8_t sensor_pin, bool is_capacitive){

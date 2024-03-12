@@ -91,51 +91,11 @@ uint16_t MqttUtility::checkConnection() {
 void MqttUtility::configureTopic(mdev* device_config) {
   if (!_init) return;
 
-  // Assigning char* values to mdev C-string literals sometimes leads to undefined behavior with serializeJson()
-  // >> Sometimes causes output[0] to be set out-of-bounds
-  // This issue can be avoided by copying string values to function-scoped char arrays first
-
-  char dev_cla[strlen(device_config->device_class)+1];
-  snprintf(dev_cla, strlen(device_config->device_class) + 1, "%s", device_config->device_class);
-
-  char name[strlen(device_config->name)+1];
-  snprintf(name, strlen(device_config->name) + 1, "%s", device_config->name);
-
-  char stat_t[strlen(device_config->state_topic)+1];
-  snprintf(stat_t, strlen(device_config->state_topic) + 1, "%s", device_config->state_topic);
-
-  char uniq_id[strlen(device_config->unique_id)+1];
-  snprintf(uniq_id, strlen(device_config->unique_id) + 1, "%s", device_config->unique_id);
-
-  char unit_of_meas[strlen(device_config->unit_of_measurement)+1];
-  snprintf(unit_of_meas, strlen(device_config->unit_of_measurement) + 1, "%s", device_config->unit_of_measurement);
-  
-  char val_tpl[strlen(device_config->value_template)+1];
-  snprintf(val_tpl, strlen(device_config->value_template) + 1, "%s", device_config->value_template);
-
-  JsonDocument doc;
-  doc["dev_cla"] = dev_cla;
-  doc["exp_aft"] = device_config->expires_after;
-  doc["name"] = name;
-  doc["stat_t"] = stat_t;
-  doc["uniq_id"] = uniq_id;
-  doc["unit_of_meas"] = unit_of_meas;
-  doc["val_tpl"] = val_tpl;
-  int len = measureJson(doc);
-  char output[len++];
-  serializeJson(doc, output, len);
-
-  this->checkConnection();
-  _mqttClient->beginMessage(device_config->configuration_topic, true);
-  _mqttClient->print(output);
-  _mqttClient->endMessage();
-
-  return;
-}
-
-// Basic MQTT Discovery protocol topic configuration using fixed-size struct
-void MqttUtility::configureTopic(mdevfs* device_config) {
-  if (!_init) return;
+  // !!! IMPORTANT !!!
+  // Assigning char* pointer values to mdev string literal fields can cause undefined behavior with serializeJson()
+  // >> serializeJson() can sometimes set output[0] out of bounds
+  // To avoid the issue, either assing only char arrays to mdev string lit. fields or copy string contents inside this method before
+  // assigning such values to a JsonDocument.
 
   JsonDocument doc;
   doc["dev_cla"] = device_config->device_class;
