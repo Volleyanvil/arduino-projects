@@ -10,6 +10,11 @@
     - Constant portions of concatenated strings are now assigned to const char arrays within scope for better parameter readability
     - Removed helper functions from string concatenation. Now calls snprintf directly instead
     - Removed static sized mdev definition and related methods from local Mqtt Utility implementation
+  [1.2] --------------
+  > Another fix to moisture sensor configuration
+   i: Issue with serializeJson() persisted in some cases after fix in 1.1
+    - Copying mdev pointer contents to method-scoped char arrays before assigning to JsonDocument prevents the issue
+    - Improved some variable naming in setup() (dht json docs, moisture sensor char arrays)
 
   Board(s):
     - Arduino MKR WiFi 1010
@@ -23,7 +28,7 @@
   Author: Ilari Mattsson
   Project MKR1010_Indoor_Plant_Monitor
   File: main.cpp
-  Version: 1.1
+  Version: 1.2
 */
 
 #include <Arduino.h>
@@ -75,8 +80,8 @@ char pass[] = S_MQTT_PASS;
 // > MQTT topics
 const char state_topic[] = "homeassistant/sensor/greenB/state";
 // > Global Classes
-// WiFiClient wifiClient;
-WiFiSSLClient wifiClient;
+WiFiClient wifiClient;
+// WiFiSSLClient wifiClient;
 MqttClient mqttClient(wifiClient);
 MqttUtility mqttUtil(wifiClient, mqttClient, ssid, psk, host, port);
 
@@ -98,7 +103,7 @@ void setup() {
   makeSenArray();
   delay(50);
 
-  mqttUtil.setMqttUser(user, pass);
+  // mqttUtil.setMqttUser(user, pass);
   delay(50);
   if(mqttUtil.init() != CONN_CONNECTED) while(1);
   delay(50);
@@ -140,13 +145,20 @@ void setup() {
 
   for (int i = 0; i < mst_arr_size; i++){
     const char name_h[]="Green B Soil Moisture", id_h[]="greenBsoil", val_h[]="{{ value_json.", val_t[]=" }}", conf_h[]="homeassistant/sensor/greenBM", conf_t[]="/config";
-    // Can be optimised by tightening array sizes if necessary
-    char vals[4][128];
-    snprintf(vals[0], 128, "%s%s%s", conf_h, (*mst_arr)[i].id, conf_t);
-    snprintf(vals[1], 128, "%s%s", name_h, (*mst_arr)[i].id);
-    snprintf(vals[2], 128, "%s%s", id_h, (*mst_arr)[i].id);
-    snprintf(vals[3], 128, "%s%s%s", val_h, (*mst_arr)[i].val_id, val_t);
-    mdev dev = { vals[0], "moisture", sensor_timeout, vals[1], state_topic, vals[2], "%", vals[3] };
+
+    char conf_topic[strlen(conf_h) + strlen((*mst_arr)[i].id) + strlen(conf_t) + 1];
+    snprintf(conf_topic, strlen(conf_h) + strlen((*mst_arr)[i].id) + strlen(conf_t) + 1, "%s%s%s", conf_h, (*mst_arr)[i].id, conf_t);
+
+    char name[strlen(name_h) + strlen((*mst_arr)[i].id) + 1];
+    snprintf(name, strlen(name_h) + strlen((*mst_arr)[i].id) + 1, "%s%s", name_h, (*mst_arr)[i].id);
+
+    char uniq_id[strlen(id_h) + strlen((*mst_arr)[i].id) + 1];
+    snprintf(uniq_id, strlen(id_h) + strlen((*mst_arr)[i].id) + 1, "%s%s", id_h, (*mst_arr)[i].id);
+
+    char val_tpl[strlen(val_h) + strlen((*mst_arr)[i].val_id) + strlen(val_t) + 1];
+    snprintf(val_tpl, strlen(val_h) + strlen((*mst_arr)[i].val_id) + strlen(val_t) + 1, "%s%s%s", val_h, (*mst_arr)[i].val_id, val_t);
+
+    mdev dev = { conf_topic, "moisture", sensor_timeout, name, state_topic, uniq_id, "%", val_tpl };
     mqttUtil.configureTopic(&dev);
   }
 
@@ -154,10 +166,10 @@ void setup() {
   dht.begin();
   const char dht_temp_conf_t[] = "homeassistant/sensor/greenBT/config";
   const char dht_hum_conf_t[] = "homeassistant/sensor/greenBH/config";
-  mdev dhttdev = { dht_temp_conf_t, "temperature", sensor_timeout, "GreenB Air Temperature", state_topic, "greenBtemp", "°C", "{{ value_json.temp | round(2) }}" };
-  mqttUtil.configureTopic(&dhttdev);
-  mdev dhthdev = { dht_hum_conf_t, "humidity", sensor_timeout, "GreenB Air Humidity", state_topic, "greenBhum", "%", "{{ value_json.hum | round(1) }}" };
-  mqttUtil.configureTopic(&dhthdev);
+  mdev dht_t_dev = { dht_temp_conf_t, "temperature", sensor_timeout, "GreenB Air Temperature", state_topic, "greenBtemp", "°C", "{{ value_json.temp | round(2) }}" };
+  mqttUtil.configureTopic(&dht_t_dev);
+  mdev dht_h_dev = { dht_hum_conf_t, "humidity", sensor_timeout, "GreenB Air Humidity", state_topic, "greenBhum", "%", "{{ value_json.hum | round(1) }}" };
+  mqttUtil.configureTopic(&dht_h_dev);
   #endif
   
   delay(50);
