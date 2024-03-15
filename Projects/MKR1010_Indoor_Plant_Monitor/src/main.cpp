@@ -15,6 +15,9 @@
    i: Issue with serializeJson() persisted in some cases after fix in 1.1
     - Copying mdev pointer contents to method-scoped char arrays before assigning to JsonDocument prevents the issue
     - Improved some variable naming in setup() (dht json docs, moisture sensor char arrays)
+  [1.3] --------------
+  > Critical bug fix
+    - Moisture sensor calibration cap values were being incorrectly saved to base
 
   Board(s):
     - Arduino MKR WiFi 1010
@@ -134,7 +137,7 @@ void setup() {
   while(digitalRead(TOUCH_PIN) != HIGH);
   for (int i = 0; i < mst_arr_size; i++){
     rgbLed(r_max*(i+1)/mst_arr_size, g_max*(i+1)/mst_arr_size, b_max*(i+1)/mst_arr_size);
-    (*mst_arr)[i].base = setMoistureCap((*mst_arr)[i].pin, is_capacitive);
+    (*mst_arr)[i].cap = setMoistureCap((*mst_arr)[i].pin, is_capacitive);
     delay(100);
   }
   delay(50);
@@ -183,6 +186,7 @@ void loop() {
   if (current - previous >= interval) {
     previous = current;
     digitalWrite(CASE_LED, HIGH);
+    Serial.println();
     measureData();
     sendData();
     digitalWrite(CASE_LED, LOW);
@@ -196,12 +200,12 @@ void loop() {
 void measureData() {
   short lp = 40;
   int raw;
-  for(int k=0; k < MST_COUNT; k++){
+  for(int k=0; k < mst_arr_size; k++){
     (*mst_arr)[k].sum = 0;
   }
 
   for(int i=0; i<lp; i++){
-    for(int k=0; k < MST_COUNT; k++){
+    for(int k=0; k < mst_arr_size; k++){
       // Constrain values to avoid mapping issues
       raw = constrain(analogRead((*mst_arr)[k].pin), (*mst_arr)[k].cap, (*mst_arr)[k].base);
       (*mst_arr)[k].sum += raw;
@@ -209,7 +213,7 @@ void measureData() {
     delay(100);
   }
   
-  for(int k=0; k < MST_COUNT; k++){
+  for(int k=0; k < mst_arr_size; k++){
     (*mst_arr)[k].val = map((*mst_arr)[k].sum/lp, (*mst_arr)[k].cap, (*mst_arr)[k].base, 100, 0);
   }
 
