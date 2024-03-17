@@ -64,12 +64,12 @@ const int humidity_offset = 14;
 
 // > Clients
 // Uncomment the Client definition you want to use (standard / SSL)
-// WiFiClient wifiClient;
-WiFiSSLClient wifiClient;
+WiFiClient wifiClient;
+//WiFiSSLClient wifiClient;
 MqttUtility mqttUtility(wifiClient);
 
 // > Sensor const variables
-const char state_topic[] = "homeassistant/sensor/greenB/state";
+const char state_topic[] = "homeassistant/sensor/blueC/state";
 const char device_name[] = "BlueC";
 const char device_name_lower[] = "blueC";
 const uint8_t num_of_sensors = 7;
