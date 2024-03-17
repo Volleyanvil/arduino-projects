@@ -164,8 +164,8 @@ void measureData() {
 
 void sendData() {
     JsonDocument doc;
-    doc[sensors[1][0]] = temperature;
-    doc[sensors[1][1]] = humidity;
+    doc[sensors[1][0]] = temperature + temperature_offset;
+    doc[sensors[1][1]] = humidity + humidity_offset;
     doc[sensors[1][2]] = pressure;
     doc[sensors[1][3]] = air_quality_index;
     doc[sensors[1][4]] = tvoc;
