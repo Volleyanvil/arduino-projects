@@ -33,7 +33,7 @@
 
 // ------- Globals ------------
 // > Macros
-#define CASE_LED 2
+#define CASE_LED LED_BUILTIN
 #define ENS_ADDR 0x53
 #define BME_ADDR 0x76
 
@@ -46,16 +46,16 @@ char user[] = S_MQTT_USER;
 char pass[] = S_MQTT_PASS;
 
 // > Configuration variables
-const long interval = 300000;
-unsigned long previous = 0;
+const uint32_t interval = 300000;
+uint32_t previous = 0;
 const uint16_t sensor_timeout = 3600;
 
 // > Sensors
 DFRobot_ENS160_I2C ens(&Wire, ENS_ADDR);
 DFRobot_BME280_IIC bme(&Wire, BME_ADDR);
-float temperature, humidity;
-uint32_t pressure;
-uint16_t tvoc, co2_concentration;
+float temperature;
+uint32_t humidity, pressure;
+uint16_t volatite_organic_compounds, co2_concentration;
 uint8_t air_quality_index, co2_level;
 
 // > Calibration offsets
@@ -63,7 +63,7 @@ const float temperature_offset = -3.6;
 const int humidity_offset = 14;
 
 // > Clients
-// Uncomment the Client definition you want to use (standard / SSL)
+// Uncomment one wifiClient declaration (standard / SSL)
 WiFiClient wifiClient;
 //WiFiSSLClient wifiClient;
 MqttUtility mqttUtility(wifiClient);
@@ -73,12 +73,16 @@ const char state_topic[] = "homeassistant/sensor/blueC/state";
 const char device_name[] = "BlueC";
 const char device_name_lower[] = "blueC";
 const uint8_t num_of_sensors = 7;
-const char *sensors[5][num_of_sensors] = {
-  { "Temperature", "Humidity", "Pressure", "AQI", "TVOC", "CO2 Concentration", "CO2 Level" },                     // Long name
-  { "temp", "humi", "pres", "aqi", "tvoc", "co2c", "co2l" },                                                      // Short name
-  { "temperature", "humidity", "pressure", "aqi", "volatile_organic_compounds_parts", "carbon_dioxide", "None" }, // Home Assistant device class https://www.home-assistant.io/integrations/sensor/#device-class
-  { "°C", "%", "hPa", NULL, "ppb", "ppm", NULL },                                                                 // Unit of measurement
-  { " | round(1)", " | round(1)", " | float / 100 | round(2)" , "", "", "", "" }                                  // Additional value template formatting https://www.home-assistant.io/docs/configuration/templating
+
+// Homeassistant sensor device classes: https://www.home-assistant.io/integrations/sensor/#device-class
+// Homeassistant JSON templating: https://www.home-assistant.io/docs/configuration/templating
+
+const char *sensors[5][num_of_sensors] = { /*{{long name}, {short name}, {device class}, {unit}, {formatting}}*/
+  { "Temperature", "Humidity", "Pressure", "AQI", "TVOC", "CO2 Concentration", "CO2 Level" },                     
+  { "temp", "humi", "pres", "aqi", "tvoc", "co2c", "co2l" },                                                      
+  { "temperature", "humidity", "pressure", "aqi", "volatile_organic_compounds_parts", "carbon_dioxide", "None" },
+  { "°C", "%", "hPa", NULL, "ppb", "ppm", NULL },
+  { " | round(1)", " | round(1)", " | float / 100 | round(2)" , "", "", "", "" }
 };
 
 // Function declarations
@@ -92,9 +96,10 @@ void setup() {
 
   // Initialize sensors
   while (bme.begin() != DFRobot_BME280_IIC::eStatusOK) delay(2000);
-  while (ens.begin() != NO_ERR) delay(1000);
+  // while (!bme.init()) delay(1000);
+  while (ens.begin() != NO_ERR) delay(3000);
   ens.setPWRMode(ENS160_STANDARD_MODE);  // ENS160_SLEEP_MODE | ENS160_IDLE_MODE | ENS160_STANDARD_MODE
-  ens.setTempAndHum(bme.getHumidity(), bme.getTemperature());
+  ens.setTempAndHum(bme.getHumidity() + humidity_offset, bme.getTemperature() + temperature_offset);
 
   // Initialize WiFi & MQTT
   mqttUtility.setWiFiNetwork(ssid, psk);
@@ -145,13 +150,35 @@ void loop() {
 }
 
 void measureData() {
-  temperature = bme.getTemperature();
-  humidity = bme.getHumidity();
+  /*uint8_t ensStatus = ens.getENS160Status();
+  DFRobot_BME280::eStatus_t bmeStatus = bme.lastOperateStatus;
+  if (bmeStatus != DFRobot_BME280::eStatusOK);*/
+
+  float temp, humi;
+  uint32_t pres;
+
+  do {
+    temp = bme.getTemperature();
+    humi = bme.getHumidity();
+    pres = bme.getPressure();
+  } while (isnan(temp) || isnan(humi) || isnan(pres));
+
+  temperature = temp + temperature_offset;
+  humidity = humi + humidity_offset;
   pressure = bme.getPressure();
 
-  air_quality_index = ens.getAQI();
-  tvoc = ens.getTVOC();
-  co2_concentration = ens.getECO2();
+  uint16_t tvoc, eco2;
+  uint8_t aqi;
+
+  do {
+    tvoc = ens.getTVOC();
+    eco2 = ens.getECO2();
+    aqi = ens.getAQI();
+  } while (isnan(tvoc) || isnan(eco2) || isnan(aqi));
+
+  volatite_organic_compounds = tvoc;
+  co2_concentration = eco2;
+  air_quality_index = aqi;
 
   if(co2_concentration < 600) co2_level = 1;
   else if (co2_concentration < 800) co2_level = 2;
@@ -164,11 +191,11 @@ void measureData() {
 
 void sendData() {
     JsonDocument doc;
-    doc[sensors[1][0]] = temperature + temperature_offset;
-    doc[sensors[1][1]] = humidity + humidity_offset;
+    doc[sensors[1][0]] = temperature;
+    doc[sensors[1][1]] = humidity;
     doc[sensors[1][2]] = pressure;
     doc[sensors[1][3]] = air_quality_index;
-    doc[sensors[1][4]] = tvoc;
+    doc[sensors[1][4]] = volatite_organic_compounds;
     doc[sensors[1][5]] = co2_concentration;
     doc[sensors[1][6]] = co2_level;
     int len = measureJson(doc);
