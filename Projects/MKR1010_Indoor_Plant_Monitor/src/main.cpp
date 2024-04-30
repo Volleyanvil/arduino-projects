@@ -186,7 +186,6 @@ void loop() {
   if (current - previous >= interval) {
     previous = current;
     digitalWrite(CASE_LED, HIGH);
-    Serial.println();
     measureData();
     sendData();
     digitalWrite(CASE_LED, LOW);

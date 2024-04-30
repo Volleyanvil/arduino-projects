@@ -29,7 +29,7 @@ extern "C" {  // External definitions using C calling conventions
 	#include "utils/mqttutility_definitions.h"
 }
 
-#define LIB_VERSION "1.0"
+#define LIB_VERSION "1.1"
 
 class MqttUtility {
 public:
