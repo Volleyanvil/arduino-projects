@@ -197,7 +197,7 @@ void setup() {
   String shtHumiValTpl = "{{ value_json.humi | round(1) }}";
   String shtHumiConfTopic = "homeassistant/sensor/" + String(deviceNameLower) + "humi/config";
 
-  mdevs shtHumiDev = {"humidity", sensorTimeout, shtHumiName, String(stateTopic), shtHumiUid, "°C", shtHumiValTpl, shtHumiConfTopic};
+  mdevs shtHumiDev = {"humidity", sensorTimeout, shtHumiName, String(stateTopic), shtHumiUid, "%", shtHumiValTpl, shtHumiConfTopic};
   mqttUtility.configureTopic(&shtHumiDev);
   delay(50);
   #endif // SHT31_ENABLED
@@ -214,8 +214,8 @@ void setup() {
   String siSunValTpl = "{{ value_json.sun }}";
   String siSunConfTopic = "homeassistant/sensor/" + String(deviceNameLower) + "sun/config";
 
-  mdevs shtTempDev = {"temperature", sensorTimeout, siSunName, String(stateTopic), siSunUid, "°C", siSunValTpl, siSunConfTopic};
-  mqttUtility.configureTopic(&shtTempDev);
+  mdevs siSunDev = {"illuminance", sensorTimeout, siSunName, String(stateTopic), siSunUid, "lx", siSunValTpl, siSunConfTopic};
+  mqttUtility.configureTopic(&siSunDev);
   delay(50);
   #endif // SI115_ENABLED
 
