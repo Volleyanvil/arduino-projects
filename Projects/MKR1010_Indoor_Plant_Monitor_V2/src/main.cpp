@@ -8,7 +8,8 @@
   - More consistent and readable naming scheme
   - CHANGED temp & humi sensor from DHT22 to SHT31
   - ADDED Si1151 Sunlight sensor
-  - 
+  - Included iterative general improvements from Nano IoT Indoor Air Monitor project
+  - Included updated mqttUtility library module
 
   Board(s):
     - Arduino MKR WiFi 1010
