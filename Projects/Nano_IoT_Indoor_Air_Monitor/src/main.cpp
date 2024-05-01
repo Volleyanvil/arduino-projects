@@ -110,8 +110,6 @@ void setup() {
     delay(50);
   }
   if(mqttUtility.begin() != CONN_CONNECTED) {
-    Serial.println(mqttUtility.getStatus());
-    Serial.println(mqttUtility.getMqttError());
     while(1) {
       digitalWrite(CASE_LED, LOW);
       delay(800);
