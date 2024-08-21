@@ -33,7 +33,7 @@
 
 // ------- Globals ------------
 // > Macros
-#define CASE_LED LED_BUILTIN
+#define CASE_LED 2 // LED_BUILTIN
 #define ENS_ADDR 0x53
 #define BME_ADDR 0x76
 
