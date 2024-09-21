@@ -106,7 +106,9 @@ void setup() {
   makeSenArray();
   delay(50);
 
-  // mqttUtil.setMqttUser(user, pass);
+  if (strlen(user) > 0 && strlen(pass) > 0) {
+    mqttUtil.setMqttUser(user, pass);
+  }
   delay(50);
   if(mqttUtil.init() != CONN_CONNECTED) while(1);
   delay(50);
