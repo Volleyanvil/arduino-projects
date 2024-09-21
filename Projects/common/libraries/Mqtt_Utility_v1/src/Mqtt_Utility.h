@@ -29,7 +29,7 @@ extern "C" {  // External definitions using C calling conventions
 	#include "utils/mqttutility_definitions.h"
 }
 
-#define LIB_VERSION 1
+#define LIB_VERSION "1.0"
 
 class MqttUtility {
 public:
@@ -47,7 +47,7 @@ public:
   /**
    * Library version
   */
-  uint8_t version();
+  static const char* version();
 
   /**
    * Publish JSON payload to topic

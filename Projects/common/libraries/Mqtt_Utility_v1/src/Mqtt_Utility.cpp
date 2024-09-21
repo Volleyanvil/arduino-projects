@@ -81,7 +81,7 @@ int MqttUtility::begin(){
   return _status;
 }
 
-uint8_t MqttUtility::version(){
+const char* MqttUtility::version(){
   return LIB_VERSION;
 }
 
